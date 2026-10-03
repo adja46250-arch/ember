@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ember · Profil</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .cover-band {
+      height: 200px;
+      background: linear-gradient(135deg, #ff5a36 0%, #ffb648 100%);
+      border-radius: var(--radius) var(--radius) 0 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .cover-band img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .pub-avatar {
+      width: 110px; height: 110px;
+      border-radius: 50%;
+      border: 4px solid var(--bg-card);
+      background: var(--primary);
+      color: #fff;
+      font-size: 2.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .pub-avatar img { width:100%; height:100%; object-fit:cover; }
+  </style>
+</head>
+<body>
+
+<div class="app-layout" id="app" style="display:none">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">Em<span>ber</span></div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="dashboard.html">
+        <span class="icon material-symbols-outlined">space_dashboard</span> Dashboard
+      </a>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-pill" onclick="window.location.href='profile.html'">
+        <div class="avatar" id="sidebar-avatar"></div>
+        <div class="user-pill-info">
+          <div class="user-pill-name"  id="sidebar-name"></div>
+          <div class="user-pill-email" id="sidebar-email"></div>
+        </div>
+      </div>
+      <a class="sidebar-link" style="margin-top:4px" onclick="handleLogout()">
+        <span class="icon material-symbols-outlined">logout</span> Déconnexion
+      </a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <div style="background:var(--bg-card); border:1px solid var(--border);
+                border-radius:var(--radius); overflow:hidden; max-width:700px">
+
+      <!-- Couverture -->
+      <div class="cover-band" id="pub-cover"></div>
+
+      <!-- Infos -->
+      <div style="padding:0 32px 32px; position:relative">
+
+        <!-- Avatar -->
+        <div style="margin-top:-55px; margin-bottom:16px">
+          <div class="pub-avatar" id="pub-avatar"></div>
+        </div>
+
+        <!-- Nom + badge rôle -->
+        <div style="display:flex; align-items:center; gap:10px;
+                    flex-wrap:wrap; margin-bottom:6px">
+          <h1 id="pub-name"
+            style="font-size:1.5rem; font-weight:700; margin:0"></h1>
+          <span id="pub-role"
+            style="background:rgba(255,90,54,0.15); color:var(--primary);
+                   font-size:0.78rem; font-weight:600; padding:3px 10px;
+                   border-radius:20px; display:none"></span>
+        </div>
+
+        <!-- Bio -->
+        <p id="pub-bio"
+          style="color:var(--text-muted); font-size:0.9rem;
+                 font-style:italic; margin-bottom:20px"></p>
+
+        <!-- Infos visibles -->
+        <div style="display:grid; gap:12px; margin-bottom:24px">
+
+          <div style="display:flex; align-items:center; gap:10px;
+                      padding:12px 16px; background:var(--bg-input);
+                      border-radius:10px">
+            <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--primary)">calendar_month</span>
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted)">Membre depuis</div>
+              <div style="font-size:0.88rem; font-weight:500" id="pub-joined"></div>
+            </div>
+          </div>
+
+          <div id="pub-role-row"
+            style="display:none; align-items:center; gap:10px;
+                   padding:12px 16px; background:var(--bg-input);
+                   border-radius:10px">
+            <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--primary)">work</span>
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted)">Poste</div>
+              <div style="font-size:0.88rem; font-weight:500" id="pub-role-text"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Projets en commun -->
+        <div id="shared-projects-section" style="display:none">
+          <p style="font-size:0.78rem; font-weight:600; text-transform:uppercase;
+                    letter-spacing:0.8px; color:var(--text-muted); margin-bottom:12px">
+            Projets en commun
+          </p>
+          <div id="shared-projects" style="display:flex; gap:8px; flex-wrap:wrap"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, logout } from './js/auth.js'
+import { supabase }            from './js/supabase.js'
+import { loadSidebarUser }     from './js/ui.js'
+
+const { user } = await loadSidebarUser()
+document.getElementById('app').style.display = 'grid'
+window.handleLogout = logout
+
+// Récupérer l'ID du profil à afficher
+const params    = new URLSearchParams(window.location.search)
+const profileId = params.get('id')
+
+if (!profileId) window.location.href = 'dashboard.html'
+
+// Charger le profil public
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', profileId)
+  .single()
+
+const { data: authUser } = await supabase
+  .from('profiles')
+  .select('full_name')
+  .eq('id', profileId)
+  .single()
+
+if (!profile) {
+  window.location.href = 'dashboard.html'
+}
+
+// Récupérer la date d'inscription depuis auth (approximation via created_at du profil)
+const joined = new Date(profile.created_at).toLocaleDateString('fr-FR', {
+  day:'numeric', month:'long', year:'numeric'
+})
+
+// Afficher la couverture
+const cover = document.getElementById('pub-cover')
+if (profile.cover_url) {
+  const img = document.createElement('img')
+  img.src   = profile.cover_url
+  img.alt   = 'cover'
+  cover.appendChild(img)
+}
+
+// Afficher l'avatar
+const avatarEl  = document.getElementById('pub-avatar')
+const name      = profile.full_name || 'Utilisateur'
+const initials  = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
+if (profile.avatar_url) {
+  avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="avatar">`
+} else {
+  avatarEl.textContent = initials
+}
+
+// Infos texte
+document.title = `Ember · ${name}`
+document.getElementById('pub-name').textContent   = name
+document.getElementById('pub-bio').textContent    = profile.bio || ''
+document.getElementById('pub-joined').textContent = joined
+
+// Badge rôle
+if (profile.role_title) {
+  const roleEl = document.getElementById('pub-role')
+  roleEl.textContent   = profile.role_title
+  roleEl.style.display = 'inline'
+
+  const roleRow = document.getElementById('pub-role-row')
+  document.getElementById('pub-role-text').textContent = profile.role_title
+  roleRow.style.display = 'flex'
+}
+
+// Projets en commun
+const { data: myProjects } = await supabase
+  .from('project_members')
+  .select('project_id')
+  .eq('user_id', user.id)
+
+const { data: theirProjects } = await supabase
+  .from('project_members')
+  .select('project_id')
+  .eq('user_id', profileId)
+
+const myIds    = myProjects?.map(p => p.project_id) || []
+const theirIds = theirProjects?.map(p => p.project_id) || []
+const sharedIds = myIds.filter(id => theirIds.includes(id))
+
+const ICON_GLYPHS = {
+  '📁':'folder', '🚀':'rocket_launch', '💡':'lightbulb', '🎯':'target',
+  '🔧':'build', '📊':'bar_chart', '🌟':'star', '🎨':'palette',
+  '📱':'smartphone', '🔐':'lock', '🏆':'emoji_events', '⚡':'bolt',
+  '🌍':'public', '📝':'edit_note', '🔬':'science'
+}
+const escapeHTML = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[c]))
+
+if (sharedIds.length) {
+  const { data: sharedProjects } = await supabase
+    .from('projects')
+    .select('id, name, icon, color')
+    .in('id', sharedIds)
+
+  const section = document.getElementById('shared-projects-section')
+  const list    = document.getElementById('shared-projects')
+  section.style.display = 'block'
+
+  list.innerHTML = sharedProjects.map(p => `
+    <a href="project.html?id=${p.id}"
+      style="display:flex; align-items:center; gap:8px;
+             background:var(--bg-input); border:1px solid var(--border);
+             border-radius:10px; padding:8px 14px; text-decoration:none;
+             color:var(--text); font-size:0.85rem; font-weight:500;
+             border-left:3px solid ${p.color}; transition:all 0.15s"
+      onmouseenter="this.style.borderColor='${p.color}'"
+      onmouseleave="this.style.borderLeft='3px solid ${p.color}'">
+      <span class="material-symbols-outlined" style="font-size:1.1rem">${ICON_GLYPHS[p.icon] || 'folder'}</span>
+      <span>${escapeHTML(p.name)}</span>
+    </a>`).join('')
+}
+</script>
+
+
+</body>
+</html>

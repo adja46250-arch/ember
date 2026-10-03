@@ -1,0 +1,288 @@
+/* ── Board ── */
+.kanban-board {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 24px;
+  min-height: calc(100vh - 180px);
+}
+
+.kanban-loading {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  padding: 40px;
+}
+
+/* ── Colonne ── */
+.kanban-column {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 300px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 180px);
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.column-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.column-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.column-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: text;
+}
+
+.column-count {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 20px;
+}
+
+.column-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.kanban-column:hover .column-actions { opacity: 1; }
+
+.col-btn {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  width: auto; padding: 2px 8px;
+  transition: all 0.15s;
+}
+.col-btn:hover { color: var(--text); background: var(--border); }
+.col-btn-danger:hover { color: var(--danger); }
+
+/* ── Liste de tâches ── */
+.task-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 60px;
+}
+
+/* Zone de drop vide */
+.task-list:empty::after {
+  content: 'Dépose ici';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+/* ── Carte tâche ── */
+.task-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.task-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.task-priority-bar {
+  height: 3px;
+  width: 100%;
+}
+
+.task-content {
+  padding: 12px 14px 10px;
+}
+
+.task-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.task-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.task-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.task-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.priority-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.task-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.task-date.overdue { color: var(--danger); }
+
+.task-assignees {
+  display: flex;
+}
+.task-avatar {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--bg-card);
+  margin-left: -6px;
+}
+.task-avatar:first-child { margin-left: 0; }
+
+/* Drag & drop */
+.task-ghost {
+  opacity: 0.4;
+  background: var(--primary) !important;
+}
+.task-dragging {
+  transform: rotate(2deg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+
+/* ── Bouton ajout tâche ── */
+.add-task-btn {
+  margin: 0 12px 12px;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  border: 1px dashed var(--border);
+  width: calc(100% - 24px);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.add-task-btn:hover {
+  background: var(--bg-input);
+  color: var(--text);
+  border-color: var(--primary);
+}
+
+/* ── Bouton ajouter colonne ── */
+.column-add {
+  min-width: 220px;
+}
+.column-add button {
+  background: var(--bg-card);
+  border: 2px dashed var(--border);
+  color: var(--text-muted);
+  padding: 14px 24px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  width: 100%;
+  transition: all 0.2s;
+}
+.column-add button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(255,90,54,0.05);
+}
+
+/* ── Modale tâche ── */
+.task-modal-wide {
+  max-width: 560px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+select {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 12px 16px;
+  outline: none;
+  transition: border-color 0.2s;
+  appearance: none;
+  cursor: pointer;
+}
+select:focus { border-color: var(--primary); }
+
+textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 12px 16px;
+  outline: none;
+  resize: vertical;
+  min-height: 90px;
+  transition: border-color 0.2s;
+}
+textarea:focus { border-color: var(--primary); }
+textarea::placeholder { color: var(--text-muted); }

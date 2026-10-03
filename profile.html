@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ember · Mon profil</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+  .cover-band {
+    height: 200px;
+    background: linear-gradient(135deg, #ff5a36 0%, #ffb648 100%);
+    border-radius: var(--radius) var(--radius) 0 0;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .cover-band img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cover-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 600;
+    gap: 8px;
+    flex-direction: column;
+  }
+  .cover-band:hover .cover-overlay { opacity: 1; }
+  .avatar-upload-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    cursor: pointer;
+  }
+  .avatar-upload-wrap:hover .avatar-overlay { opacity: 1; }
+  .avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .profile-avatar-big {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid var(--bg-card);
+    background: var(--primary);
+    color: #fff;
+    font-size: 2.4rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .profile-avatar-big img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    width: auto;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    transition: all 0.15s;
+  }
+  .tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-input);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-layout" id="app" style="display:none">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">Em<span>ber</span></div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="dashboard.html">
+        <span class="icon material-symbols-outlined">space_dashboard</span> Dashboard
+      </a>
+      <a class="sidebar-link active" href="profile.html">
+        <span class="icon material-symbols-outlined">account_circle</span> Mon profil
+      </a>
+      <a class="sidebar-link" href="stats.html">
+        <span class="icon material-symbols-outlined">monitoring</span> Statistiques
+      </a>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-pill" onclick="window.location.href='profile.html'">
+        <div class="avatar" id="sidebar-avatar"></div>
+        <div class="user-pill-info">
+          <div class="user-pill-name"  id="sidebar-name"></div>
+          <div class="user-pill-email" id="sidebar-email"></div>
+        </div>
+      </div>
+      <a class="sidebar-link" style="margin-top:4px" onclick="handleLogout()">
+        <span class="icon material-symbols-outlined">logout</span> Déconnexion
+      </a>
+    </div>
+  </aside>
+
+  <main class="main-content" style="padding:32px 40px">
+
+    <!-- Carte profil principale -->
+<div style="background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); overflow:hidden; margin-bottom:24px">
+
+  <!-- Bandeau couverture cliquable -->
+  <div class="cover-band" id="cover-band"
+    onclick="document.getElementById('cover-file').click()">
+    <div class="cover-overlay">
+      <span class="material-symbols-outlined" style="font-size:1.5rem">add_photo_alternate</span>
+      <span>Changer la photo de couverture</span>
+    </div>
+    <input type="file" id="cover-file" accept="image/*"
+      style="display:none" onchange="handleCoverUpload(event)">
+  </div>
+
+  <!-- Infos principales -->
+  <div style="padding:0 32px 24px; position:relative">
+
+    <!-- Avatar + statut upload -->
+    <div style="display:flex; align-items:flex-end;
+                justify-content:space-between; margin-top:-60px; margin-bottom:16px">
+
+      <div class="avatar-upload-wrap"
+        onclick="document.getElementById('avatar-file').click()">
+        <div class="profile-avatar-big" id="profile-avatar-big"></div>
+        <div class="avatar-overlay">
+          <span class="material-symbols-outlined" style="font-size:1.2rem">photo_camera</span>
+          <span>Modifier</span>
+        </div>
+        <input type="file" id="avatar-file" accept="image/*"
+          style="display:none" onchange="handleAvatarUpload(event)">
+      </div>
+
+      <div style="display:flex; gap:10px; padding-bottom:8px; align-items:center">
+        <span id="upload-status"
+          style="font-size:0.82rem; color:var(--text-muted)"></span>
+        <button onclick="window.location.href='dashboard.html'"
+          style="background:var(--bg-input); color:var(--text-muted);
+                 border:1px solid var(--border); padding:8px 16px;
+                 border-radius:8px; font-size:0.85rem; width:auto">
+          ← Retour
+        </button>
+      </div>
+    </div>
+
+    <!-- Nom, email, bio -->
+    <div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+        <h1 id="profile-name-display"
+          style="font-size:1.5rem; font-weight:700; margin-bottom:0"></h1>
+        <span id="profile-role-display"
+          style="background:rgba(255,90,54,0.15); color:var(--primary);
+                 font-size:0.78rem; font-weight:600; padding:3px 10px;
+                 border-radius:20px; display:none"></span>
+      </div>
+      <p id="profile-email-display"
+        style="color:var(--text-muted); font-size:0.9rem; margin:4px 0 6px"></p>
+      <p id="profile-bio-display"
+        style="color:var(--text-muted); font-size:0.88rem; font-style:italic"></p>
+    </div>
+
+    <!-- Stats rapides -->
+    <div style="display:flex; gap:32px; margin-top:20px;
+                padding-top:20px; border-top:1px solid var(--border); flex-wrap:wrap">
+      <div style="text-align:center">
+        <div style="font-size:1.5rem; font-weight:700" id="qs-projects">—</div>
+        <div style="font-size:0.78rem; color:var(--text-muted)">Projets</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:1.5rem; font-weight:700" id="qs-tasks">—</div>
+        <div style="font-size:0.78rem; color:var(--text-muted)">Tâches</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:1.5rem; font-weight:700" id="qs-comments">—</div>
+        <div style="font-size:0.78rem; color:var(--text-muted)">Commentaires</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:1.5rem; font-weight:700" id="qs-done">—</div>
+        <div style="font-size:0.78rem; color:var(--text-muted)">Terminées</div>
+      </div>
+      <div style="margin-left:auto; align-self:center; text-align:right">
+        <div style="font-size:0.78rem; color:var(--text-muted)"
+          id="profile-joined"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+    <!-- Onglets -->
+    <div style="display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:24px">
+      <button class="tab-btn active" onclick="switchTab('info', this)">
+        <span class="material-symbols-outlined" style="font-size:1.05rem;vertical-align:-3px">edit</span> Informations
+      </button>
+      <button class="tab-btn" onclick="switchTab('security', this)">
+        <span class="material-symbols-outlined" style="font-size:1.05rem;vertical-align:-3px">lock</span> Sécurité
+      </button>
+      <button class="tab-btn" onclick="switchTab('activity', this)">
+        <span class="material-symbols-outlined" style="font-size:1.05rem;vertical-align:-3px">history</span> Activité récente
+      </button>
+    </div>
+
+    <!-- Onglet Informations -->
+    <div class="tab-panel active" id="tab-info">
+      <div style="background:var(--bg-card); border:1px solid var(--border);
+                  border-radius:var(--radius); padding:28px; max-width:600px">
+
+        <div class="field-row" style="margin-bottom:20px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Prénom</label>
+            <input type="text" id="input-firstname" placeholder="Ton prénom">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Nom</label>
+            <input type="text" id="input-lastname" placeholder="Ton nom">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="input-email" disabled
+            style="opacity:0.6; cursor:not-allowed">
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-top:4px">
+            L'email ne peut pas être modifié
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label>Bio</label>
+          <textarea id="input-bio" rows="3"
+            placeholder="Décris-toi en quelques mots..."
+            style="width:100%; min-height:80px; resize:vertical;
+                   background:var(--bg-input); border:1px solid var(--border);
+                   border-radius:var(--radius); color:var(--text);
+                   font-family:inherit; font-size:0.95rem;
+                   padding:12px 16px; outline:none; transition:border-color 0.2s"
+            onfocus="this.style.borderColor='var(--primary)'"
+            onblur="this.style.borderColor='var(--border)'">
+          </textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Poste / Rôle</label>
+          <input type="text" id="input-role" placeholder="Ex: Développeur fullstack, Designer...">
+        </div>
+
+        <p class="error-msg"   id="profile-error"></p>
+        <p class="success-msg" id="profile-success"></p>
+
+        <div style="display:flex; justify-content:flex-end">
+          <button class="btn-primary" id="btn-save-profile"
+            onclick="saveProfile()"
+            style="width:auto; padding:11px 28px">
+            Enregistrer
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Onglet Sécurité -->
+    <div class="tab-panel" id="tab-security">
+      <div style="background:var(--bg-card); border:1px solid var(--border);
+                  border-radius:var(--radius); padding:28px; max-width:480px">
+
+        <h3 style="font-size:1rem; font-weight:600; margin-bottom:20px">
+          Changer le mot de passe
+        </h3>
+
+        <div class="form-group">
+          <label>Nouveau mot de passe</label>
+          <input type="password" id="input-new-password" placeholder="Min. 6 caractères">
+        </div>
+
+        <div class="form-group">
+          <label>Confirmer le mot de passe</label>
+          <input type="password" id="input-confirm-password" placeholder="Répète le mot de passe">
+        </div>
+
+        <!-- Indicateur de force -->
+        <div style="margin-bottom:20px">
+          <div style="display:flex; gap:4px; margin-bottom:6px">
+            <div id="str1" style="height:4px; flex:1; border-radius:2px; background:var(--border)"></div>
+            <div id="str2" style="height:4px; flex:1; border-radius:2px; background:var(--border)"></div>
+            <div id="str3" style="height:4px; flex:1; border-radius:2px; background:var(--border)"></div>
+            <div id="str4" style="height:4px; flex:1; border-radius:2px; background:var(--border)"></div>
+          </div>
+          <p id="strength-label" style="font-size:0.78rem; color:var(--text-muted)"></p>
+        </div>
+
+        <p class="error-msg"   id="password-error"></p>
+        <p class="success-msg" id="password-success"></p>
+
+        <div style="display:flex; justify-content:flex-end">
+          <button class="btn-primary" id="btn-save-password"
+            onclick="savePassword()"
+            style="width:auto; padding:11px 28px">
+            Changer le mot de passe
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Onglet Activité -->
+    <div class="tab-panel" id="tab-activity">
+      <div style="background:var(--bg-card); border:1px solid var(--border);
+                  border-radius:var(--radius); padding:28px; max-width:600px">
+        <div id="activity-list">
+          <p style="color:var(--text-muted); font-size:0.88rem">Chargement...</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module">
+import { logout }                          from './js/auth.js'
+import { supabase }                        from './js/supabase.js'
+import { initKanban }                      from './js/kanban.js'
+import { inviteMember, getProjectMembers } from './js/projects.js'
+import { loadSidebarUser }                 from './js/ui.js'
+
+// ── Auth ──────────────────────────────────────────────────
+const { user } = await loadSidebarUser()
+document.getElementById('app').style.display = 'grid'
+window.handleLogout = logout
+
+const escapeHTML = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[c]))
+// icon: 'error' | 'success' | 'loading'
+function setStatusHTML(el, icon, text) {
+  const glyphs = { error: 'error', success: 'check_circle', loading: 'progress_activity' }
+  const spin = icon === 'loading' ? ';animation:spin 1s linear infinite' : ''
+  el.innerHTML = text
+    ? `<span class="material-symbols-outlined" style="font-size:1em;vertical-align:-3px${spin}">${glyphs[icon] || 'info'}</span> ${escapeHTML(text)}`
+    : ''
+}
+
+// ── Charger le profil ─────────────────────────────────────
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', user.id)
+  .single()
+
+const fullName = profile?.full_name || user.email.split('@')[0]
+const parts    = fullName.trim().split(' ')
+const firstName = parts[0] || ''
+const lastName  = parts.slice(1).join(' ') || ''
+const initials  = fullName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
+const joined    = new Date(user.created_at).toLocaleDateString('fr-FR',{
+  day:'numeric', month:'long', year:'numeric'
+})
+
+// Afficher avatar (photo ou initiales)
+const avatarBig = document.getElementById('profile-avatar-big')
+if (profile?.avatar_url) {
+  avatarBig.innerHTML = `<img src="${profile.avatar_url}" alt="avatar">`
+} else {
+  avatarBig.textContent = initials
+}
+
+// Sidebar
+const sidebarAv = document.getElementById('sidebar-avatar')
+if (profile?.avatar_url) {
+  sidebarAv.innerHTML = `<img src="${profile.avatar_url}" alt="av" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+} else {
+  sidebarAv.textContent = initials
+}
+document.getElementById('sidebar-name').textContent  = fullName
+document.getElementById('sidebar-email').textContent = user.email
+
+// Infos affichées
+document.getElementById('profile-name-display').textContent  = fullName
+document.getElementById('profile-email-display').textContent = user.email
+document.getElementById('profile-bio-display').textContent   = profile?.bio || ''
+document.getElementById('profile-joined').textContent        = `Membre depuis ${joined}`
+
+// Champs formulaire
+document.getElementById('input-firstname').value = firstName
+document.getElementById('input-lastname').value  = lastName
+document.getElementById('input-email').value     = user.email
+document.getElementById('input-bio').value       = profile?.bio || ''
+document.getElementById('input-role').value      = profile?.role_title || ''
+
+// ── Upload avatar ─────────────────────────────────────────
+window.handleAvatarUpload = async (event) => {
+  const file   = event.target.files[0]
+  const status = document.getElementById('upload-status')
+  if (!file) return
+
+  if (file.size > 5 * 1024 * 1024) {
+    status.style.color = 'var(--danger)'
+    setStatusHTML(status, 'error', 'Fichier trop volumineux (max 5 Mo)')
+    return
+  }
+
+  status.style.color = 'var(--text-muted)'
+  setStatusHTML(status, 'loading', 'Upload en cours...')
+
+  try {
+    const ext      = file.name.split('.').pop()
+    const fileName = `${user.id}/avatar.${ext}`
+
+    const { error: upErr } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, { upsert: true })
+
+    if (upErr) throw upErr
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName)
+
+    const urlWithTime = publicUrl + '?t=' + Date.now()
+
+    await supabase.from('profiles')
+      .update({ avatar_url: urlWithTime })
+      .eq('id', user.id)
+
+    avatarBig.innerHTML = `<img src="${urlWithTime}" alt="avatar">`
+    sidebarAv.innerHTML = `<img src="${urlWithTime}" alt="av"
+      style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+
+    status.style.color = 'var(--success)'
+    setStatusHTML(status, 'success', 'Photo mise à jour !')
+    setTimeout(() => status.textContent = '', 3000)
+
+  } catch(e) {
+    status.style.color = 'var(--danger)'
+    setStatusHTML(status, 'error', e.message)
+    console.error(e)
+  }
+  event.target.value = ''
+}
+
+window.handleCoverUpload = async (event) => {
+  const file   = event.target.files[0]
+  const status = document.getElementById('upload-status')
+  if (!file) return
+
+  status.style.color = 'var(--text-muted)'
+  setStatusHTML(status, 'loading', 'Upload couverture...')
+
+  try {
+    const ext      = file.name.split('.').pop()
+    const fileName = `${user.id}/cover.${ext}`
+
+    const { error: upErr } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, { upsert: true })
+
+    if (upErr) throw upErr
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName)
+
+    const urlWithTime = publicUrl + '?t=' + Date.now()
+
+    await supabase.from('profiles')
+      .update({ cover_url: urlWithTime })
+      .eq('id', user.id)
+
+    const band = document.getElementById('cover-band')
+    const existing = band.querySelector('img')
+    if (existing) {
+      existing.src = urlWithTime
+    } else {
+      const img = document.createElement('img')
+      img.src   = urlWithTime
+      img.alt   = 'cover'
+      band.insertBefore(img, band.firstChild)
+    }
+
+    status.style.color = 'var(--success)'
+    setStatusHTML(status, 'success', 'Couverture mise à jour !')
+    setTimeout(() => status.textContent = '', 3000)
+
+  } catch(e) {
+    status.style.color = 'var(--danger)'
+    setStatusHTML(status, 'error', e.message)
+  }
+  event.target.value = ''
+}
+// ── Upload photo de couverture ────────────────────────────
+window.handleCoverUpload = async (event) => {
+  const file   = event.target.files[0]
+  const status = document.getElementById('upload-status')
+  if (!file) return
+
+  if (file.size > 10 * 1024 * 1024) {
+    status.style.color = 'var(--danger)'
+    setStatusHTML(status, 'error', 'Fichier trop volumineux (max 10 Mo)')
+    return
+  }
+
+  status.style.color = 'var(--text-muted)'
+  setStatusHTML(status, 'loading', 'Upload couverture...')
+
+  try {
+    const ext      = file.name.split('.').pop()
+    const fileName = `${user.id}/cover.${ext}`
+
+    const { error: upErr } = await supabase.storage
+      .from('attachments')
+      .upload(fileName, file, { upsert: true })
+
+    if (upErr) throw upErr
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('attachments')
+      .getPublicUrl(fileName)
+
+    await supabase.from('profiles')
+      .update({ cover_url: publicUrl })
+      .eq('id', user.id)
+
+    // Mettre à jour l'affichage
+    const band = document.getElementById('cover-band')
+    const existing = band.querySelector('img')
+    if (existing) {
+      existing.src = publicUrl + '?t=' + Date.now()
+    } else {
+      const img    = document.createElement('img')
+      img.src      = publicUrl + '?t=' + Date.now()
+      img.alt      = 'cover'
+      band.insertBefore(img, band.firstChild)
+    }
+
+    status.style.color = 'var(--success)'
+    setStatusHTML(status, 'success', 'Couverture mise à jour !')
+    setTimeout(() => status.textContent = '', 3000)
+
+  } catch(e) {
+    status.style.color = 'var(--danger)'
+    setStatusHTML(status, 'error', e.message)
+  }
+  event.target.value = ''
+}
+
+// ── Sauvegarder profil ────────────────────────────────────
+window.saveProfile = async () => {
+  const first  = document.getElementById('input-firstname').value.trim()
+  const last   = document.getElementById('input-lastname').value.trim()
+  const bio    = document.getElementById('input-bio').value.trim()
+  const role   = document.getElementById('input-role').value.trim()
+  const errEl  = document.getElementById('profile-error')
+  const succEl = document.getElementById('profile-success')
+  const btn    = document.getElementById('btn-save-profile')
+
+  errEl.classList.remove('show')
+  succEl.classList.remove('show')
+
+  if (!first) {
+    errEl.textContent = 'Le prénom est requis.'
+    errEl.classList.add('show')
+    return
+  }
+
+  const fullName = [first, last].filter(Boolean).join(' ')
+  btn.disabled = true; btn.textContent = 'Enregistrement...'
+
+  try {
+    await supabase.from('profiles')
+      .update({ full_name: fullName, bio, role_title: role })
+      .eq('id', user.id)
+
+    await supabase.auth.updateUser({ data: { full_name: fullName } })
+
+    document.getElementById('profile-name-display').textContent = fullName
+    document.getElementById('profile-bio-display').textContent  = bio
+    document.getElementById('sidebar-name').textContent         = fullName
+
+    const newInitials = fullName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
+    if (!profile?.avatar_url) {
+      avatarBig.textContent = newInitials
+      sidebarAv.textContent = newInitials
+    }
+
+    setStatusHTML(succEl, 'success', 'Profil mis à jour !')
+    succEl.classList.add('show')
+    setTimeout(() => succEl.classList.remove('show'), 3000)
+
+  } catch(e) {
+    errEl.textContent = e.message
+    errEl.classList.add('show')
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enregistrer'
+  }
+}
+
+// Charger la photo de couverture
+if (profile?.cover_url) {
+  const band = document.getElementById('cover-band')
+  const img  = document.createElement('img')
+  img.src    = profile.cover_url
+  img.alt    = 'cover'
+  band.insertBefore(img, band.firstChild)
+}
+
+// Afficher le rôle si renseigné
+if (profile?.role_title) {
+  const roleEl = document.getElementById('profile-role-display')
+  roleEl.textContent  = profile.role_title
+  roleEl.style.display = 'inline'
+}
+
+// ── Indicateur force mot de passe ────────────────────────
+document.getElementById('input-new-password').addEventListener('input', function() {
+  const v   = this.value
+  const bars = [1,2,3,4].map(i => document.getElementById(`str${i}`))
+  const label = document.getElementById('strength-label')
+  const colors = ['#ef4444','#f59e0b','#3b82f6','#10b981']
+  const labels = ['Très faible','Faible','Moyen','Fort']
+
+  let score = 0
+  if (v.length >= 6)  score++
+  if (v.length >= 10) score++
+  if (/[A-Z]/.test(v) && /[0-9]/.test(v)) score++
+  if (/[^A-Za-z0-9]/.test(v)) score++
+
+  bars.forEach((b, i) => {
+    b.style.background = i < score ? colors[score-1] : 'var(--border)'
+  })
+  label.textContent   = v.length ? labels[score-1] || '' : ''
+  label.style.color   = v.length ? colors[score-1] : 'var(--text-muted)'
+})
+
+// ── Changer mot de passe ──────────────────────────────────
+window.savePassword = async () => {
+  const newP   = document.getElementById('input-new-password').value
+  const confP  = document.getElementById('input-confirm-password').value
+  const errEl  = document.getElementById('password-error')
+  const succEl = document.getElementById('password-success')
+  const btn    = document.getElementById('btn-save-password')
+
+  errEl.classList.remove('show')
+  succEl.classList.remove('show')
+
+  if (newP.length < 6) {
+    errEl.textContent = 'Minimum 6 caractères.'
+    errEl.classList.add('show')
+    return
+  }
+  if (newP !== confP) {
+    errEl.textContent = 'Les mots de passe ne correspondent pas.'
+    errEl.classList.add('show')
+    return
+  }
+
+  btn.disabled = true; btn.textContent = 'Modification...'
+
+  try {
+    const { error } = await supabase.auth.updateUser({ password: newP })
+    if (error) throw error
+
+    setStatusHTML(succEl, 'success', 'Mot de passe changé !')
+    succEl.classList.add('show')
+    document.getElementById('input-new-password').value    = ''
+    document.getElementById('input-confirm-password').value = ''
+    ;[1,2,3,4].forEach(i => {
+      document.getElementById(`str${i}`).style.background = 'var(--border)'
+    })
+    document.getElementById('strength-label').textContent = ''
+    setTimeout(() => succEl.classList.remove('show'), 3000)
+
+  } catch(e) {
+    errEl.textContent = e.message
+    errEl.classList.add('show')
+  } finally {
+    btn.disabled = false; btn.textContent = 'Changer le mot de passe'
+  }
+}
+
+// ── Onglets ───────────────────────────────────────────────
+window.switchTab = (tab, btn) => {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+  document.getElementById(`tab-${tab}`).classList.add('active')
+  btn.classList.add('active')
+  if (tab === 'activity') loadActivity()
+}
+
+// ── Activité récente ──────────────────────────────────────
+async function loadActivity() {
+  const list = document.getElementById('activity-list')
+
+  try {
+    const [
+      { data: tasks },
+      { data: comments },
+      { data: assigned }
+    ] = await Promise.all([
+      supabase.from('tasks').select('id, title, created_at')
+        .eq('created_by', user.id).order('created_at', { ascending: false }).limit(5),
+      supabase.from('comments').select('id, content, created_at, tasks(title)')
+        .eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+      supabase.from('task_members').select('task_id, tasks(title, created_at)')
+        .eq('user_id', user.id).limit(5)
+    ])
+
+    const events = [
+      ...(tasks || []).map(t => ({
+        icon: 'add_task', text: `Tu as créé la tâche "${escapeHTML(t.title)}"`,
+        date: t.created_at
+      })),
+      ...(comments || []).map(c => ({
+        icon: 'chat_bubble', text: `Tu as commenté "${escapeHTML(c.tasks?.title || 'une tâche')}"`,
+        date: c.created_at
+      })),
+      ...(assigned || []).map(a => ({
+        icon: 'person', text: `Tu as été assigné à "${escapeHTML(a.tasks?.title || 'une tâche')}"`,
+        date: a.tasks?.created_at || new Date().toISOString()
+      }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10)
+
+    if (!events.length) {
+      list.innerHTML = `<p style="color:var(--text-muted);font-size:0.88rem">Aucune activité récente</p>`
+      return
+    }
+
+    list.innerHTML = events.map(e => {
+      const date = new Date(e.date).toLocaleDateString('fr-FR',{
+        day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'
+      })
+      return `
+        <div class="activity-item">
+          <div class="activity-dot"><span class="material-symbols-outlined" style="font-size:1rem">${e.icon}</span></div>
+          <div style="flex:1">
+            <p style="font-size:0.88rem; margin-bottom:2px">${e.text}</p>
+            <p style="font-size:0.75rem; color:var(--text-muted)">${date}</p>
+          </div>
+        </div>`
+    }).join('')
+
+  } catch(e) { console.error(e) }
+}
+
+// ── Stats ─────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const [
+      { count: projCount },
+      { count: taskCount },
+      { count: commCount }
+    ] = await Promise.all([
+      supabase.from('projects').select('*',{count:'exact',head:true}).eq('owner_id', user.id).eq('archived', false),
+      supabase.from('task_members').select('*',{count:'exact',head:true}).eq('user_id', user.id),
+      supabase.from('comments').select('*',{count:'exact',head:true}).eq('user_id', user.id)
+    ])
+
+    const { data: doneCols } = await supabase
+      .from('columns').select('id').ilike('name','%termin%')
+
+    let doneCount = 0
+    if (doneCols?.length) {
+      const { count } = await supabase.from('tasks')
+        .select('*',{count:'exact',head:true})
+        .in('column_id', doneCols.map(c=>c.id))
+        .eq('created_by', user.id)
+      doneCount = count || 0
+    }
+
+    document.getElementById('qs-projects').textContent = projCount || 0
+    document.getElementById('qs-tasks').textContent    = taskCount || 0
+    document.getElementById('qs-comments').textContent = commCount || 0
+    document.getElementById('qs-done').textContent     = doneCount
+
+  } catch(e) { console.error(e) }
+}
+
+// ── Toast ─────────────────────────────────────────────────
+window.showToast = (msg, type = 'info') => {
+  const c = document.getElementById('toast-container')
+  const t = document.createElement('div')
+  t.className = `toast ${type}`
+  t.innerHTML = `<span class="material-symbols-outlined" style="font-size:1.1em;vertical-align:-3px">${type==='success'?'check_circle':type==='error'?'error':'info'}</span><span>${escapeHTML(msg)}</span>`
+  c.appendChild(t)
+  setTimeout(() => t.remove(), 3500)
+}
+
+// ── Init ──────────────────────────────────────────────────
+loadStats()
+</script>
+
+</body>
+</html>

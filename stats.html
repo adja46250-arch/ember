@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ember · Statistiques</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .sidebar-section {
+  padding: 20px 12px 8px;
+  flex-shrink: 0;
+}
+
+/* Section projets — défilante */
+.sidebar-section.scrollable {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.sidebar-section.scrollable::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-section.scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-section.scrollable::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.sidebar-section.scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    .metric-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .metric-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .chart-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .member-stat-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-input);
+      border-radius: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .member-stat-card:hover { background: var(--border); }
+    .progress-row { margin-bottom: 14px; }
+    .progress-row-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .progress-track {
+      height: 8px;
+      background: var(--bg-input);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-fill-bar {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.6s ease;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-layout" id="app" style="display:none">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">Em<span>ber</span></div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="dashboard.html">
+        <span class="icon material-symbols-outlined">space_dashboard</span> Dashboard
+      </a>
+      <a class="sidebar-link active" href="stats.html">
+        <span class="icon material-symbols-outlined">monitoring</span> Statistiques
+      </a>
+      <a class="sidebar-link" href="profile.html">
+        <span class="icon material-symbols-outlined">account_circle</span> Mon profil
+      </a>
+    </div>
+    <div class="sidebar-section scrollable">
+      <div class="sidebar-section-title">Projets</div>
+      <div id="sidebar-projects"></div>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-pill" onclick="window.location.href='profile.html'">
+        <div class="avatar" id="sidebar-avatar"></div>
+        <div class="user-pill-info">
+          <div class="user-pill-name"  id="sidebar-name"></div>
+          <div class="user-pill-email" id="sidebar-email"></div>
+        </div>
+      </div>
+      <a class="sidebar-link" style="margin-top:4px" onclick="handleLogout()">
+        <span class="icon material-symbols-outlined">logout</span> Déconnexion
+      </a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <div class="page-header" style="margin-bottom:32px">
+      <h1><span class="material-symbols-outlined" style="vertical-align:-4px;margin-right:6px">monitoring</span>Statistiques</h1>
+      
+    </div>
+
+    <div id="no-project"
+      style="text-align:center; padding:80px 20px; color:var(--text-muted)">
+      <div class="material-symbols-outlined" style="font-size:3rem; margin-bottom:16px">bar_chart</div>
+      <p>Sélectionne un projet pour voir ses statistiques</p>
+    </div>
+
+    <div id="stats-content" style="display:none">
+
+      <!-- Métriques uniques — pas dans le dashboard -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr);
+                  gap:16px; margin-bottom:28px">
+        <div class="metric-card">
+          <div class="metric-label">Taux de complétion</div>
+          <div class="metric-value" id="m-completion"
+            style="color:var(--success)">—</div>
+          <div class="metric-sub">tâches terminées</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Tâches en retard</div>
+          <div class="metric-value" id="m-overdue"
+            style="color:var(--danger)">—</div>
+          <div class="metric-sub">deadline dépassée</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Sans deadline</div>
+          <div class="metric-value" id="m-nodeadline"
+            style="color:var(--warning)">—</div>
+          <div class="metric-sub">tâches non planifiées</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Tâches urgentes</div>
+          <div class="metric-value" id="m-urgent"
+            style="color:#ef4444">—</div>
+          <div class="metric-sub">priorité urgente</div>
+        </div>
+      </div>
+
+      <!-- Graphiques -->
+      <div style="display:grid; grid-template-columns:3fr 2fr;
+                  gap:24px; margin-bottom:24px">
+
+        <div class="chart-card">
+          <div class="chart-title">Répartition par colonne</div>
+          <canvas id="chart-columns" height="200"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">Répartition par priorité</div>
+          <canvas id="chart-priority" height="200"></canvas>
+        </div>
+
+      </div>
+
+      <!-- Progression colonnes -->
+      <div class="chart-card" style="margin-bottom:24px">
+        <div class="chart-title">Progression du projet</div>
+        <div id="progress-bars"></div>
+      </div>
+
+      <!-- Tâches sans assigné -->
+      <div style="display:grid; grid-template-columns:1fr 1fr;
+                  gap:24px; margin-bottom:24px">
+
+        <div class="chart-card">
+          <div class="chart-title"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:-2px;color:var(--warning)">person_off</span> Tâches non assignées</div>
+          <div id="unassigned-list"></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:-2px;color:var(--danger)">priority_high</span> Tâches urgentes actives</div>
+          <div id="urgent-list"></div>
+        </div>
+
+      </div>
+
+      <!-- Membres et leurs tâches -->
+      <div class="chart-card">
+        <div class="chart-title">Charge de travail par membre</div>
+        <div id="members-workload"
+          style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+                 gap:12px; margin-top:4px">
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script type="module">
+import { requireAuth, logout } from './js/auth.js'
+import { supabase }            from './js/supabase.js'
+import { getProjects }         from './js/projects.js'
+
+const user = await requireAuth()
+document.getElementById('app').style.display = 'grid'
+window.handleLogout = logout
+
+// Avatar sidebar
+const { data: profile } = await supabase
+  .from('profiles').select('full_name, avatar_url, email')
+  .eq('id', user.id).single()
+
+const name     = profile?.full_name || user.email.split('@')[0]
+const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
+const sidebarAv = document.getElementById('sidebar-avatar')
+if (profile?.avatar_url) {
+  sidebarAv.style.background = 'transparent'
+  sidebarAv.innerHTML = `<img src="${profile.avatar_url}"
+    style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+} else { sidebarAv.textContent = initials }
+document.getElementById('sidebar-name').textContent  = name
+document.getElementById('sidebar-email').textContent = user.email
+
+// Charger projets
+const projects = await getProjects()
+const sidebar  = document.getElementById('sidebar-projects')
+
+
+sidebar.innerHTML = projects.map(p => `
+  <a class="sidebar-link" href="#"
+    onclick="loadStats('${p.id}'); return false">
+    <span style="width:8px;height:8px;border-radius:50%;
+                background:${p.color};flex-shrink:0"></span>
+    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+      ${p.name}
+    </span>
+  </a>`).join('')
+
+const params = new URLSearchParams(window.location.search)
+const pid = params.get('project')
+if (pid) {
+  loadStats(pid)
+}
+
+let chartCols = null
+let chartPrio = null
+
+window.loadStats = async (projectId) => {
+  if (!projectId) {
+    document.getElementById('no-project').style.display    = 'block'
+    document.getElementById('stats-content').style.display = 'none'
+    return
+  }
+
+  try {
+    // Récupérer données
+    const [
+      { data: columns },
+      { data: tasks },
+      { data: members },
+      { data: taskMembers }
+] = await Promise.all([
+  supabase.from('columns').select('*')
+    .eq('project_id', projectId).order('position'),
+  supabase.from('tasks').select('*')
+    .eq('project_id', projectId),
+  supabase.from('project_members')
+    .select('*, profiles(id, full_name, avatar_url)')
+    .eq('project_id', projectId),
+  supabase.from('task_members')
+    .select('task_id, user_id, tasks!inner(project_id)')
+    .eq('tasks.project_id', projectId)
+])
+console.log('taskMembers:', taskMembers)
+console.log('tasks:', tasks?.map(t => t.id))
+
+    const total     = tasks?.length || 0
+    const overdue   = tasks?.filter(t => t.due_date && new Date(t.due_date) < new Date()).length || 0
+    const noDeadline = tasks?.filter(t => !t.due_date).length || 0
+    const urgent    = tasks?.filter(t => t.priority === 'urgent').length || 0
+
+    // Trouver colonne "terminé"
+    const doneCol   = columns?.find(c => c.name.toLowerCase().includes('termin'))
+    const doneTasks = doneCol ? tasks?.filter(t => t.column_id === doneCol.id).length : 0
+    const completion = total ? Math.round((doneTasks / total) * 100) : 0
+
+    document.getElementById('no-project').style.display    = 'none'
+    document.getElementById('stats-content').style.display = 'block'
+    document.getElementById('m-completion').textContent = completion + '%'
+    document.getElementById('m-overdue').textContent    = overdue
+    document.getElementById('m-nodeadline').textContent = noDeadline
+    document.getElementById('m-urgent').textContent     = urgent
+
+    // ── Graphique colonnes
+    const byCol = (columns || []).map(c => ({
+      name  : c.name,
+      color : c.color,
+      count : tasks?.filter(t => t.column_id === c.id).length || 0
+    }))
+
+    if (chartCols) chartCols.destroy()
+    chartCols = new Chart(document.getElementById('chart-columns'), {
+      type: 'bar',
+      data: {
+        labels   : byCol.map(c => c.name),
+        datasets : [{
+          data            : byCol.map(c => c.count),
+          backgroundColor : byCol.map(c => c.color + '99'),
+          borderColor     : byCol.map(c => c.color),
+          borderWidth: 2, borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize:1, color:'#8888aa' }, grid: { color:'#2e2e3e' } },
+          x: { ticks: { color:'#8888aa' }, grid: { display: false } }
+        }
+      }
+    })
+
+    // ── Graphique priorités
+    const byPrio = [
+      tasks?.filter(t => t.priority==='low').length    || 0,
+      tasks?.filter(t => t.priority==='medium').length || 0,
+      tasks?.filter(t => t.priority==='high').length   || 0,
+      tasks?.filter(t => t.priority==='urgent').length || 0
+    ]
+
+    if (chartPrio) chartPrio.destroy()
+    chartPrio = new Chart(document.getElementById('chart-priority'), {
+      type: 'doughnut',
+      data: {
+        labels   : ['Basse','Moyenne','Haute','Urgente'],
+        datasets : [{
+          data            : byPrio,
+          backgroundColor : ['#10b981aa','#3b82f6aa','#f59e0baa','#ef4444aa'],
+          borderColor     : ['#10b981','#3b82f6','#f59e0b','#ef4444'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position:'bottom', labels:{ color:'#8888aa', padding:16 } } }
+      }
+    })
+
+    // ── Barres de progression
+    const pbars = document.getElementById('progress-bars')
+    pbars.innerHTML = byCol.map(col => {
+      const pct = total ? Math.round((col.count / total) * 100) : 0
+      return `
+        <div class="progress-row">
+          <div class="progress-row-header">
+            <span style="font-size:0.88rem;font-weight:500">${col.name}</span>
+            <span style="font-size:0.82rem;color:var(--text-muted)">
+              ${col.count} / ${total} tâches (${pct}%)
+            </span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill-bar"
+              style="width:${pct}%; background:${col.color}"></div>
+          </div>
+        </div>`
+    }).join('')
+
+    // ── Tâches non assignées
+    const assignedTaskIds = new Set((taskMembers || []).map(tm => tm.task_id))
+    const unassigned = (tasks || []).filter(t => !assignedTaskIds.has(t.id))
+    const unassignedList = document.getElementById('unassigned-list')
+
+    if (!unassigned.length) {
+      unassignedList.innerHTML = `<p style="color:var(--success);font-size:0.85rem">
+        <span class="material-symbols-outlined" style="font-size:1em;vertical-align:-3px">check_circle</span> Toutes les tâches sont assignées !</p>`
+    } else {
+      unassignedList.innerHTML = unassigned.slice(0, 5).map(t => `
+        <div style="display:flex;align-items:center;gap:8px;
+                    padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="width:8px;height:8px;border-radius:50%;
+                       background:var(--warning);flex-shrink:0"></span>
+          <a href="task-detail.html?id=${t.id}"
+             style="font-size:0.85rem;color:var(--text);text-decoration:none"
+             onmouseenter="this.style.color='var(--primary)'"
+             onmouseleave="this.style.color='var(--text)'">${escapeHTML(t.title)}</a>
+        </div>`).join('') +
+        (unassigned.length > 5 ? `<p style="font-size:0.78rem;color:var(--text-muted);
+          margin-top:8px">+${unassigned.length - 5} autres</p>` : '')
+    }
+
+    // ── Tâches urgentes actives
+    const urgentTasks  = (tasks || []).filter(t =>
+      t.priority === 'urgent' && t.column_id !== doneCol?.id
+    )
+    const urgentList = document.getElementById('urgent-list')
+
+    if (!urgentTasks.length) {
+      urgentList.innerHTML = `<p style="color:var(--success);font-size:0.85rem">
+        <span class="material-symbols-outlined" style="font-size:1em;vertical-align:-3px">check_circle</span> Aucune tâche urgente en cours !</p>`
+    } else {
+      urgentList.innerHTML = urgentTasks.slice(0, 5).map(t => {
+        const isOverdue = t.due_date && new Date(t.due_date) < new Date()
+        return `
+          <div style="display:flex;align-items:center;gap:8px;
+                      padding:8px 0;border-bottom:1px solid var(--border)">
+            <span class="material-symbols-outlined" style="font-size:1rem;color:${isOverdue?'var(--danger)':'var(--warning)'}">${isOverdue ? 'error' : 'bolt'}</span>
+            <div style="flex:1">
+              <a href="task-detail.html?id=${t.id}"
+                 style="font-size:0.85rem;color:var(--text);text-decoration:none"
+                 onmouseenter="this.style.color='var(--primary)'"
+                 onmouseleave="this.style.color='var(--text)'">${escapeHTML(t.title)}</a>
+              ${t.due_date ? `<div style="font-size:0.75rem;color:${isOverdue?'var(--danger)':'var(--text-muted)'}">
+                <span class="material-symbols-outlined" style="font-size:0.9em;vertical-align:-2px">event</span> ${new Date(t.due_date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
+              </div>` : ''}
+            </div>
+          </div>`
+      }).join('')
+    }
+
+    // ── Charge de travail par membre
+    const workload = document.getElementById('members-workload')
+    workload.innerHTML = (members || []).map(m => {
+      const mname    = m.profiles?.full_name || 'Utilisateur'
+      const minitials = mname.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
+      const count    = (taskMembers || []).filter(tm => tm.user_id === m.user_id).length
+      const pct      = total ? Math.round((count / total) * 100) : 0
+
+      return `
+        <div class="member-stat-card"
+             onclick="window.location.href='public-profile.html?id=${m.user_id}'">
+          <div class="avatar" style="width:36px;height:36px;font-size:0.85rem;flex-shrink:0">
+            ${m.profiles?.avatar_url
+              ? `<img src="${m.profiles.avatar_url}"
+                   style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+              : minitials}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.85rem;font-weight:600;
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${mname}
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin:2px 0">
+              ${count} tâche${count > 1 ? 's' : ''} assignée${count > 1 ? 's' : ''}
+            </div>
+            <div style="height:4px;background:var(--border);border-radius:4px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;
+                          background:var(--primary);border-radius:4px"></div>
+            </div>
+          </div>
+        </div>`
+    }).join('')
+
+  } catch(e) {
+    console.error(e)
+    showToast('Erreur de chargement', 'error')
+  }
+}
+
+const escapeHTML = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[c]))
+window.showToast = (msg, type = 'info') => {
+  const c = document.getElementById('toast-container')
+  const t = document.createElement('div')
+  t.className = `toast ${type}`
+  t.innerHTML = `<span class="material-symbols-outlined" style="font-size:1.1em;vertical-align:-3px">${type==='success'?'check_circle':type==='error'?'error':'info'}</span><span>${escapeHTML(msg)}</span>`
+  c.appendChild(t)
+  setTimeout(() => t.remove(), 3500)
+}
+</script>
+
+</body>
+</html>
