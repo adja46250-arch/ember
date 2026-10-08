@@ -196,6 +196,7 @@
 <script type="module">
 import { requireAuth, logout }          from './js/auth.js'
 import { supabase }                     from './js/supabase.js'
+import { safeUrl }                      from './js/utils.js'
 import { getProjects, createProject, updateProject,
         archiveProject, deleteProject } from './js/projects.js'
 import { getNotifications, getUnreadCount,
@@ -229,7 +230,7 @@ if (sidebarAv) {
     sidebarAv.style.background = 'transparent'
     sidebarAv.style.padding    = '0'
     sidebarAv.innerHTML = `
-      <img src="${profile.avatar_url}"
+      <img src="${safeUrl(profile.avatar_url)}"
         style="width:100%;height:100%;
               object-fit:cover;border-radius:50%">`
   } else {
@@ -401,7 +402,7 @@ window.toggleArchived = async () => {
 
     grid2.innerHTML = archived.map(p => `
       <div class="project-card"
-        style="--project-color:${p.color}; opacity:0.7">
+        style="--project-color:${escapeHTML(p.color)}; opacity:0.7">
         <div class="project-card-header">
           <div class="project-icon">${iconGlyph(p.icon)}</div>
           <h3>${escapeHTML(p.name)}</h3>
@@ -513,8 +514,8 @@ document.getElementById('stat-members').textContent  = membersCount
     // Sidebar
     sidebar.innerHTML = allProjects.map(p => `
       <a class="sidebar-link" href="project.html?id=${p.id}">
-        <span style="width:8px;height:8px;border-radius:50%;background:${p.color};flex-shrink:0"></span>
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>
+        <span style="width:8px;height:8px;border-radius:50%;background:${escapeHTML(p.color)};flex-shrink:0"></span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHTML(p.name)}</span>
       </a>`).join('')
 
     if (!allProjects.length) {
@@ -536,7 +537,7 @@ function renderProjectCards(projects) {
       : null
     const isOverdue = p.deadline && new Date(p.deadline) < new Date()
     return `
-      <div class="project-card" style="--project-color:${p.color}"
+      <div class="project-card" style="--project-color:${escapeHTML(p.color)}"
            onclick="goToProject('${p.id}')">
         <button class="card-menu-btn"
           onclick="event.stopPropagation(); toggleMenu('${p.id}')">⋯</button>
@@ -552,7 +553,7 @@ function renderProjectCards(projects) {
         <p class="project-desc">${escapeHTML(p.description) || 'Aucune description'}</p>
         <div class="project-card-footer">
           <div class="members-stack">
-            <div class="avatar" style="background:${p.color}">${p.name[0].toUpperCase()}</div>
+            <div class="avatar" style="background:${escapeHTML(p.color)}">${escapeHTML(p.name[0].toUpperCase())}</div>
           </div>
           ${deadline ? `<span class="deadline-badge ${isOverdue?'overdue':''}"><span class="material-symbols-outlined" style="font-size:1em;vertical-align:-3px">event</span> ${deadline}</span>` : ''}
         </div>
@@ -611,8 +612,8 @@ window.handleSearch = (query) => {
             onmouseleave="this.style.background=''">
             <span style="width:8px;height:8px;border-radius:50%;background:${pColors[t.priority]};flex-shrink:0"></span>
             <div>
-              <div style="font-size:0.88rem;font-weight:500">${t.title}</div>
-              <div style="font-size:0.75rem;color:var(--text-muted)">${t.columns?.name || ''}</div>
+              <div style="font-size:0.88rem;font-weight:500">${escapeHTML(t.title)}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted)">${escapeHTML(t.columns?.name || '')}</div>
             </div>
           </div>`
       }).join('')
@@ -852,6 +853,7 @@ updateNotifBadge()
 
 <script type="module">
 import { supabase } from './js/supabase.js'
+import { escapeHTML } from './js/utils.js'
 
 const floatHistory = []
 let panelOpen = false
@@ -889,7 +891,7 @@ window.sendFloatAI = async () => {
   userDiv.innerHTML = `
     <div style="font-size:0.7rem;font-weight:600;
                 color:var(--text-muted);margin-bottom:4px">Toi</div>
-    <div>${message}</div>`
+    <div>${escapeHTML(message)}</div>`
   history.appendChild(userDiv)
   history.scrollTop = history.scrollHeight
 
@@ -963,7 +965,7 @@ const answer = data.choices?.[0]?.message?.content
                   color:var(--text-muted);margin-bottom:4px">
         <span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:-2px">auto_awesome</span> Claude
       </div>
-      <div style="line-height:1.6">${answer.replace(/\n/g, '<br>')}</div>`
+      <div style="line-height:1.6">${escapeHTML(answer).replace(/\n/g, '<br>')}</div>`
 
   } catch(e) {
     loadDiv.innerHTML = `

@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { safeUrl } from './utils.js'
 
 export async function loadSidebarUser() {
   // Vérifier la session
@@ -24,7 +25,7 @@ export async function loadSidebarUser() {
   if (sidebarAv) {
     if (profile?.avatar_url) {
       sidebarAv.innerHTML = `
-        <img src="${profile.avatar_url}"
+        <img src="${safeUrl(profile.avatar_url)}"
           style="width:100%;height:100%;object-fit:cover;border-radius:50%"
           alt="avatar">`
     } else {

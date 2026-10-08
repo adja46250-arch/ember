@@ -383,6 +383,7 @@
 <script type="module">
 import { logout }                          from './js/auth.js'
 import { supabase }                        from './js/supabase.js'
+import { escapeHTML, safeUrl }             from './js/utils.js'
 import { initKanban }                      from './js/kanban.js'
 import { inviteMember, getProjectMembers } from './js/projects.js'
 import { loadSidebarUser }                 from './js/ui.js'
@@ -392,9 +393,6 @@ const { user } = await loadSidebarUser()
 document.getElementById('app').style.display = 'grid'
 window.handleLogout = logout
 
-const escapeHTML = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({
-  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-}[c]))
 // icon: 'error' | 'success' | 'loading'
 function setStatusHTML(el, icon, text) {
   const glyphs = { error: 'error', success: 'check_circle', loading: 'progress_activity' }
@@ -423,7 +421,7 @@ const joined    = new Date(user.created_at).toLocaleDateString('fr-FR',{
 // Afficher avatar (photo ou initiales)
 const avatarBig = document.getElementById('profile-avatar-big')
 if (profile?.avatar_url) {
-  avatarBig.innerHTML = `<img src="${profile.avatar_url}" alt="avatar">`
+  avatarBig.innerHTML = `<img src="${safeUrl(profile.avatar_url)}" alt="avatar">`
 } else {
   avatarBig.textContent = initials
 }
@@ -431,7 +429,7 @@ if (profile?.avatar_url) {
 // Sidebar
 const sidebarAv = document.getElementById('sidebar-avatar')
 if (profile?.avatar_url) {
-  sidebarAv.innerHTML = `<img src="${profile.avatar_url}" alt="av" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+  sidebarAv.innerHTML = `<img src="${safeUrl(profile.avatar_url)}" alt="av" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
 } else {
   sidebarAv.textContent = initials
 }
@@ -796,7 +794,7 @@ async function loadActivity() {
         <div class="activity-item">
           <div class="activity-dot"><span class="material-symbols-outlined" style="font-size:1rem">${e.icon}</span></div>
           <div style="flex:1">
-            <p style="font-size:0.88rem; margin-bottom:2px">${e.text}</p>
+            <p style="font-size:0.88rem; margin-bottom:2px">${escapeHTML(e.text)}</p>
             <p style="font-size:0.75rem; color:var(--text-muted)">${date}</p>
           </div>
         </div>`

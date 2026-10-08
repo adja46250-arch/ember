@@ -66,8 +66,8 @@
       </div>
     </div>
 
-    <!-- Invitation membres -->
-    <div style="display:flex; gap:10px; align-items:center;
+    <!-- Invitation membres (réservée aux admins) -->
+    <div id="invite-box" style="display:flex; gap:10px; align-items:center;
                 margin-bottom:20px; flex-wrap:wrap;
                 background:var(--bg-card); border:1px solid var(--border);
                 border-radius:var(--radius); padding:16px">
@@ -164,6 +164,8 @@
 <script type="module">
 import { requireAuth, logout }                    from './js/auth.js'
 import { supabase }                               from './js/supabase.js'
+import { escapeHTML, safeUrl }                    from './js/utils.js'
+import { getMyRole, applyRoleUI, canEdit }        from './js/permissions.js'
 import { initKanban }                             from './js/kanban.js'
 import { inviteMember, getProjectMembers }        from './js/projects.js'
 
@@ -192,7 +194,7 @@ if (sidebarAv) {
     sidebarAv.style.background = 'transparent'
     sidebarAv.style.padding    = '0'
     sidebarAv.innerHTML = `
-      <img src="${profile.avatar_url}"
+      <img src="${safeUrl(profile.avatar_url)}"
         style="width:100%;height:100%;
                object-fit:cover;border-radius:50%">`
   } else {
@@ -272,12 +274,12 @@ async function loadMembers() {
                         justify-content:center;overflow:hidden;
                         flex-shrink:0">
               ${avatar
-                ? `<img src="${avatar}"
+                ? `<img src="${safeUrl(avatar)}"
                      style="width:100%;height:100%;
                             object-fit:cover;border-radius:50%">`
                 : initials}
             </div>
-            <span style="font-size:0.8rem;font-weight:500">${name}</span>
+            <span style="font-size:0.8rem;font-weight:500">${escapeHTML(name)}</span>
             <span class="material-symbols-outlined" style="font-size:0.85rem;color:var(--text-muted)">
               ${roles[m.role] || ''}
             </span>
@@ -334,9 +336,6 @@ document.getElementById('task-modal-overlay').addEventListener('click', e => {
 })
 
 // ── Toast ─────────────────────────────────────────────────
-const escapeHTML = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({
-  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-}[c]))
 window.showToast = (msg, type = 'info') => {
   const container = document.getElementById('toast-container')
   const toast     = document.createElement('div')
@@ -348,8 +347,12 @@ window.showToast = (msg, type = 'info') => {
 }
 
 // ── Init ──────────────────────────────────────────────────
+// ── Rôle : l'observateur est en lecture seule ─────────────
+const myRole = await getMyRole(projectId, user.id)
+const editor = applyRoleUI(myRole)
+
 loadMembers()
-await initKanban(projectId, user)
+await initKanban(projectId, user, editor)
 </script>
 <!-- Bouton flottant IA -->
 <button id="ai-float-btn" onclick="toggleAIPanel()"
@@ -433,6 +436,7 @@ await initKanban(projectId, user)
 
 <script type="module">
 import { supabase } from './js/supabase.js'
+import { escapeHTML } from './js/utils.js'
 
 const floatHistory = []
 let panelOpen = false
@@ -469,7 +473,7 @@ window.sendFloatAI = async () => {
   userDiv.innerHTML = `
     <div style="font-size:0.7rem;font-weight:600;
                 color:var(--text-muted);margin-bottom:4px">Toi</div>
-    <div>${message}</div>`
+    <div>${escapeHTML(message)}</div>`
   history.appendChild(userDiv)
   history.scrollTop = history.scrollHeight
 
@@ -544,7 +548,7 @@ window.sendFloatAI = async () => {
                   color:var(--text-muted);margin-bottom:4px">
         <span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:-2px">auto_awesome</span> Claude
       </div>
-      <div style="line-height:1.6">${answer.replace(/\n/g, '<br>')}</div>`
+      <div style="line-height:1.6">${escapeHTML(answer).replace(/\n/g, '<br>')}</div>`
 
   } catch(e) {
     loadDiv.innerHTML = `

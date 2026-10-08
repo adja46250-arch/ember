@@ -250,6 +250,8 @@
 <script type="module">
 import { requireAuth, logout }    from './js/auth.js'
 import { supabase }               from './js/supabase.js'
+import { escapeHTML, safeUrl }    from './js/utils.js'
+import { getMyRole, applyRoleUI, canEdit } from './js/permissions.js'
 import {
   getSubtasks, getComments,
   createComment, deleteComment,
@@ -272,7 +274,7 @@ const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
 const sidebarAv = document.getElementById('sidebar-avatar')
 if (profile?.avatar_url) {
   sidebarAv.style.background = 'transparent'
-  sidebarAv.innerHTML = `<img src="${profile.avatar_url}"
+  sidebarAv.innerHTML = `<img src="${safeUrl(profile.avatar_url)}"
     style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
 } else { sidebarAv.textContent = initials }
 document.getElementById('sidebar-name').textContent  = name
@@ -288,6 +290,7 @@ let subtasks   = []
 let comments   = []
 let attachments = []
 let allColumns = []
+let canEditTask = false   // faux pour un observateur
 
 // ── Charger tout ──────────────────────────────────────────
 async function loadAll() {
@@ -313,6 +316,10 @@ async function loadAll() {
       window.location.href = 'dashboard.html'
       return
     }
+
+    // Rôle dans le projet (observateur = lecture seule)
+    canEditTask = applyRoleUI(await getMyRole(task.project_id, user.id))
+    if (!canEditTask) document.getElementById('column-select').disabled = true
 
     // Colonnes du projet
     const { data: cols } = await supabase
@@ -363,7 +370,7 @@ async function loadAll() {
     document.getElementById('column-select').innerHTML =
       allColumns.map(c =>
         `<option value="${c.id}" ${c.id===task.column_id?'selected':''}>
-          ${c.name}
+          ${escapeHTML(c.name)}
         </option>`
       ).join('')
 
@@ -386,13 +393,13 @@ async function loadAll() {
         <div class="avatar"
           style="width:30px;height:30px;font-size:0.75rem;flex-shrink:0">
           ${creator.avatar_url
-            ? `<img src="${creator.avatar_url}"
+            ? `<img src="${safeUrl(creator.avatar_url)}"
                  style="width:100%;height:100%;
                         object-fit:cover;border-radius:50%">`
             : cinitials}
         </div>
         <div>
-          <div style="font-size:0.85rem;font-weight:600">${cname}</div>
+          <div style="font-size:0.85rem;font-weight:600">${escapeHTML(cname)}</div>
           <div style="font-size:0.72rem;color:var(--text-muted)">
             A créé cette tâche
           </div>
@@ -414,12 +421,12 @@ async function loadAll() {
             <div class="avatar"
               style="width:26px;height:26px;font-size:0.7rem">
               ${m.profiles?.avatar_url
-                ? `<img src="${m.profiles.avatar_url}"
+                ? `<img src="${safeUrl(m.profiles.avatar_url)}"
                      style="width:100%;height:100%;
                             object-fit:cover;border-radius:50%">`
                 : minitials}
             </div>
-            <span style="font-size:0.85rem;flex:1">${mname}</span>
+            <span style="font-size:0.85rem;flex:1">${escapeHTML(mname)}</span>
             ${isMe
               ? `<span style="font-size:0.7rem;background:rgba(255,90,54,0.15);
                               color:var(--primary);padding:1px 6px;
@@ -448,6 +455,7 @@ async function loadAll() {
 
 // ── Changer colonne ───────────────────────────────────────
 window.changeColumn = async () => {
+  if (!canEditTask) return
   const column_id = document.getElementById('column-select').value
   try {
     const { error } = await supabase
@@ -470,6 +478,7 @@ window.changeColumn = async () => {
 
 // ── Marquer comme terminée ────────────────────────────────
 window.markAsCompleted = async () => {
+  if (!canEditTask) return
   const doneCol = allColumns.find(c =>
     c.name.toLowerCase().includes('termin')
   )
@@ -535,7 +544,7 @@ async function loadSubtasks() {
       <span style="font-size:0.88rem;
                    text-decoration:${s.completed?'line-through':'none'};
                    color:${s.completed?'var(--text-muted)':'var(--text)'}">
-        ${s.title}
+        ${escapeHTML(s.title)}
       </span>
     </div>`).join('')
 }
@@ -561,23 +570,24 @@ function renderComments() {
     })
     return `
       <div class="comment-item">
-        <div class="comment-avatar">${cinitials}</div>
+        <div class="comment-avatar">${escapeHTML(cinitials)}</div>
         <div class="comment-body">
           <div class="comment-header">
-            <span class="comment-author">${cname}</span>
+            <span class="comment-author">${escapeHTML(cname)}</span>
             <span class="comment-date">${date}</span>
             ${c.user_id===user.id
               ? `<button class="comment-delete"
                    onclick="removeComment('${c.id}')">✕</button>`
               : ''}
           </div>
-          <div class="comment-text">${c.content}</div>
+          <div class="comment-text">${escapeHTML(c.content).replace(/\n/g, '<br>')}</div>
         </div>
       </div>`
   }).join('')
 }
 
 window.sendComment = async () => {
+  if (!canEditTask) return
   const input   = document.getElementById('comment-input')
   const content = input.value.trim()
   if (!content) return
@@ -619,14 +629,15 @@ function renderAttachments() {
     return `
       <div class="attachment-item">
         <span class="attachment-icon material-symbols-outlined">description</span>
-        <a href="${a.url}" target="_blank"
-           class="attachment-name">${a.name}</a>
+        <a href="${safeUrl(a.url)}" target="_blank" rel="noopener noreferrer"
+           class="attachment-name">${escapeHTML(a.name)}</a>
         <span class="attachment-size">${size}</span>
       </div>`
   }).join('')
 }
 
 window.handleFileUpload = async (event) => {
+  if (!canEditTask) return
   const file = event.target.files[0]
   if (!file) return
   try {
@@ -642,9 +653,6 @@ window.handleFileUpload = async (event) => {
 
 
 // ── Toast ─────────────────────────────────────────────────
-const escapeHTML = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({
-  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-}[c]))
 window.showToast = (msg, type = 'info') => {
   const c = document.getElementById('toast-container')
   const t = document.createElement('div')
@@ -738,6 +746,9 @@ loadAll()
 </div>
 
 <script>
+const escapeAI = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[c]))
 const floatHistory = []
 let panelOpen = false
 
@@ -763,7 +774,7 @@ window.sendFloatAI = async () => {
   userDiv.innerHTML = `
     <div style="font-size:0.7rem;font-weight:600;
                 color:var(--text-muted);margin-bottom:4px">Toi</div>
-    <div>${message}</div>`
+    <div>${escapeAI(message)}</div>`
   history.appendChild(userDiv)
   history.scrollTop = history.scrollHeight
 
@@ -837,7 +848,7 @@ Réponds en français, de façon concise et utile.`
         <span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:-2px">auto_awesome</span> Assistant
       </div>
       <div style="line-height:1.6">
-        ${answer.replace(/\n/g, '<br>')}
+        ${escapeAI(answer).replace(/\n/g, '<br>')}
       </div>`
 
   } catch(e) {

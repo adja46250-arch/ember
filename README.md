@@ -16,12 +16,13 @@ Ember permet à une équipe de gérer ses projets sur des tableaux kanban person
 
 - **Tableaux kanban** personnalisables par projet, avec priorités et échéances
 - **Fiches tâches** complètes : sous-tâches, commentaires, pièces jointes
-- **Gestion d'équipe** avec rôles (admin / membre / observateur) et invitations par email
-- **Vue "Ma tâche"** : accès restreint pour un collaborateur externe, qui voit et termine uniquement sa tâche assignée
-- **Profil public partageable**, façon portfolio, montrant les projets partagés
+- **Gestion d'équipe** avec trois rôles appliqués par la base de données (RLS) : *admin* (gère les membres), *membre* (modifie les tâches) et *observateur* (lecture seule, avec un mode lecture dans l'interface)
+- **Vue "Ma tâche"** : écran simplifié pour la personne assignée, qui consulte sa tâche et la marque comme terminée
+- **Profil partageable** entre membres, façon portfolio, montrant les projets en commun
 - **Statistiques** par projet : tâches non assignées, tâches urgentes, charge par membre
 - **Assistant IA contextuel** sur le tableau de bord, les projets et les tâches (API Groq, Llama 3.3 70B)
 - Authentification email/mot de passe et Google OAuth
+- Sécurité : RLS sur toutes les tables, droits d'écriture réservés aux éditeurs, affichage des textes utilisateur protégé contre les injections (XSS), fichiers limités aux membres du projet
 
 ## Architecture
 

@@ -3,16 +3,19 @@ import { getColumns, createColumn, updateColumn,
          deleteColumn, reorderColumns }            from './tasks.js'
 import { getTasks, createTask, updateTask,
          deleteTask, moveTask, reorderTasks }      from './tasks.js'
+import { escapeHTML }                              from './utils.js'
 
 let projectId   = null
 let currentUser = null
 let allTasks    = []
 let allColumns  = []
+let editable    = true   // false pour un observateur (lecture seule)
 
 // ── Init ──────────────────────────────────────────────────
-export async function initKanban(pid, user) {
+export async function initKanban(pid, user, canEditProject = true) {
   projectId   = pid
   currentUser = user
+  editable    = canEditProject
   await renderBoard()
   initRealtime()
 }
@@ -26,14 +29,14 @@ async function renderBoard() {
     allColumns = await getColumns(projectId)
     allTasks   = await getTasks(projectId)
 
-    if (!allColumns.length) {
+    if (!allColumns.length && editable) {
       await createDefaultColumns()
       allColumns = await getColumns(projectId)
     }
 
     renderColumns()
   } catch (e) {
-    board.innerHTML = `<div class="kanban-loading">Erreur : ${e.message}</div>`
+    board.innerHTML = `<div class="kanban-loading">Erreur : ${escapeHTML(e.message)}</div>`
   }
 }
 
@@ -60,11 +63,13 @@ function renderColumns() {
     board.appendChild(colEl)
   })
 
-  // Bouton ajouter colonne
-  const addBtn = document.createElement('div')
-  addBtn.className = 'column-add'
-  addBtn.innerHTML = `<button onclick="window.addColumn()">＋ Ajouter une colonne</button>`
-  board.appendChild(addBtn)
+  // Bouton ajouter colonne (réservé aux éditeurs)
+  if (editable) {
+    const addBtn = document.createElement('div')
+    addBtn.className = 'column-add'
+    addBtn.innerHTML = `<button onclick="window.addColumn()">＋ Ajouter une colonne</button>`
+    board.appendChild(addBtn)
+  }
 
   initDragDrop()
 }
@@ -78,8 +83,8 @@ function createColumnElement(col, tasks) {
   div.innerHTML = `
     <div class="column-header">
       <div class="column-header-left">
-        <span class="column-dot" style="background:${col.color}"></span>
-        <span class="column-name" ondblclick="window.editColumnName('${col.id}', this)">${col.name}</span>
+        <span class="column-dot" style="background:${escapeHTML(col.color)}"></span>
+        <span class="column-name" ondblclick="window.editColumnName('${col.id}', this)">${escapeHTML(col.name)}</span>
         <span class="column-count">${tasks.length}</span>
       </div>
       <div class="column-actions">
@@ -117,20 +122,20 @@ function createTaskHTML(task) {
   const assignees = task.task_members?.map(m => {
     const name = m.profiles?.full_name || '?'
     const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)
-    return `<div class="task-avatar" title="${name}">${initials}</div>`
+    return `<div class="task-avatar" title="${escapeHTML(name)}">${escapeHTML(initials)}</div>`
   }).join('') || ''
 
   return `
     <div class="task-card" data-task-id="${task.id}"
          onclick="window.openTaskDetail('${task.id}')">
-      <div class="task-priority-bar" style="background:${priorityColors[task.priority]}"></div>
+      <div class="task-priority-bar" style="background:${priorityColors[task.priority] || '#3b82f6'}"></div>
       <div class="task-content">
-        <p class="task-title">${task.title}</p>
-        ${task.description ? `<p class="task-desc">${task.description}</p>` : ''}
+        <p class="task-title">${escapeHTML(task.title)}</p>
+        ${task.description ? `<p class="task-desc">${escapeHTML(task.description)}</p>` : ''}
         <div class="task-footer">
           <div class="task-footer-left">
-            <span class="priority-badge" style="color:${priorityColors[task.priority]}">
-              ${priorityLabels[task.priority]}
+            <span class="priority-badge" style="color:${priorityColors[task.priority] || '#3b82f6'}">
+              ${priorityLabels[task.priority] || ''}
             </span>
             ${dueDate ? `<span class="task-date ${isOverdue ? 'overdue' : ''}"><span class="material-symbols-outlined" style="font-size:0.95em;vertical-align:-2px">calendar_month</span> ${dueDate}</span>` : ''}
           </div>
@@ -145,6 +150,7 @@ function createTaskHTML(task) {
 function initDragDrop() {
   document.querySelectorAll('.task-list').forEach(list => {
     Sortable.create(list, {
+      disabled: !editable,
       group: 'tasks',
       animation: 150,
       ghostClass: 'task-ghost',
@@ -177,6 +183,7 @@ function initDragDrop() {
 
 // ── Ajouter une colonne ───────────────────────────────────
 window.addColumn = async () => {
+  if (!editable) return
   const name = prompt('Nom de la nouvelle colonne :')
   if (!name?.trim()) return
 
@@ -193,6 +200,7 @@ window.addColumn = async () => {
 
 // ── Renommer une colonne (double-clic) ────────────────────
 window.editColumnName = async (colId, el) => {
+  if (!editable) return
   const oldName = el.textContent
   el.contentEditable = true
   el.focus()
@@ -228,6 +236,7 @@ window.editColumnName = async (colId, el) => {
 
 // ── Supprimer une colonne ─────────────────────────────────
 window.confirmDeleteColumn = async (colId) => {
+  if (!editable) return
   const col = allColumns.find(c => c.id === colId)
   const taskCount = allTasks.filter(t => t.column_id === colId).length
 
@@ -250,6 +259,7 @@ window.confirmDeleteColumn = async (colId) => {
 
 // ── Ouvrir formulaire ajout tâche ─────────────────────────
 window.openAddTask = (colId) => {
+  if (!editable) return
   const modal = document.getElementById('task-modal')
   document.getElementById('task-modal-title').textContent = 'Nouvelle tâche'
   document.getElementById('task-title-input').value       = ''
@@ -277,6 +287,7 @@ window.closeTaskModal = () => {
 
 // ── Sauvegarder tâche ─────────────────────────────────────
 window.saveTask = async () => {
+  if (!editable) return
   const modal    = document.getElementById('task-modal')
   const title    = document.getElementById('task-title-input').value.trim()
   const errEl    = document.getElementById('task-modal-error')
@@ -330,6 +341,7 @@ window.saveTask = async () => {
 
 // ── Supprimer tâche ───────────────────────────────────────
 window.deleteCurrentTask = async () => {
+  if (!editable) return
   const taskId = document.getElementById('task-modal').dataset.taskId
   if (!taskId || !confirm('Supprimer cette tâche ?')) return
 
@@ -360,9 +372,6 @@ function initRealtime() {
 }
 
 // ── Toast ─────────────────────────────────────────────────
-const escapeHTML = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({
-  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-}[c]))
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toast-container')
   if (!container) return
